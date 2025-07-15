@@ -1,0 +1,164 @@
+"use client";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { FaChevronRight } from "react-icons/fa";
+import { toast } from "sonner"; // Add this if you're using react-toastify
+
+const questions = [
+  "What did you feel in that moment?",
+  "What were the key thoughts running through your mind?",
+  "How did the situation change your perspective?",
+  "Who were you with during this experience?",
+  "Where did this event take place?",
+  "What were your first actions after it happened?",
+  "How would you describe your emotions on that day?",
+  "What impact did this event have on your life?",
+  "What would you tell your past self about this moment?",
+  "Looking back, what would you do differently?",
+];
+
+export default function ClarityQuestions() {
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<string[]>(new Array(questions.length).fill(""));
+  const [isFinished, setIsFinished] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Loading state
+
+  const handleAnswerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const updatedAnswers = [...answers];
+    updatedAnswers[currentQuestionIndex] = e.target.value;
+    setAnswers(updatedAnswers);
+  };
+
+  const router = useRouter(); 
+
+  const handleNextClick = () => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else {
+      router.push('/confirmation-page')
+      setIsFinished(true); // All questions answered
+      handleCreateStory();
+    }
+  };
+
+  const handleSkipClick = () => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else {
+      setIsFinished(true);
+      handleCreateStory();
+    }
+  };
+
+  const handleCreateStory = () => {
+    setIsLoading(true); // Start loading
+    setTimeout(() => {
+      setIsLoading(false); // Stop loading after 2 seconds
+      toast.success("Story created successfully!"); // Display success toast
+    }, 2000);
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col lg:flex-row justify-between gap-6 lg:gap-10 font-[Inter] p-6 sm:p-8 lg:p-10 bg-[url('/assets/clarity-questions-bg.png')] bg-cover bg-center w-full">
+      {/* Left Panel - Questions */}
+      <div className="flex-1 flex flex-col justify-between order-2 lg:order-1">
+        <div className="flex flex-col justify-between h-full">
+          {/* Header */}
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-[#1D3557] mb-4 leading-tight font-[Cormorant_Garamond] font-bold">
+            Let&apos;s explore your memory a little deeper
+          </h1>
+          <p className="text-[#5A9AAF] mb-8 sm:mb-10 lg:mb-12 text-lg sm:text-xl lg:text-[22px]">
+            Answer these questions in your own way!
+          </p>
+
+          {/* Progress Bar and Question Info */}
+          <div className="mb-4 sm:mb-6">
+            <div className="flex justify-between text-sm sm:text-[18px] text-[#1D3557]">
+              <div>Question {currentQuestionIndex + 1}:</div>
+              <div>
+                {currentQuestionIndex + 1}/{questions.length}
+              </div>
+            </div>
+            <div className="w-full bg-[#FFFDF9] border border-[#A8DADC] rounded-full h-2 sm:h-3">
+              <div
+                className="bg-[#5A9AAF] h-full rounded-full transition-all duration-300"
+                style={{
+                  width: `${
+                    ((currentQuestionIndex + 1) / questions.length) * 100
+                  }%`,
+                }}
+              ></div>
+            </div>
+          </div>
+
+          {/* Current Question */}
+          <p className="text-lg sm:text-xl lg:text-[28px] h-[70px] font-medium text-[#1D3557] mb-6">
+            {questions[currentQuestionIndex]}
+          </p>
+
+          {/* Answer Input */}
+          <div className="mb-8 relative">
+            <textarea
+              value={answers[currentQuestionIndex]}
+              onChange={handleAnswerChange}
+              placeholder="Type your answer here..."
+              className="w-full h-36 sm:h-48 lg:h-55 p-4 border border-[#A8DADC] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#457B9D] focus:border-transparent text-[#457B9D] bg-[#F1FAEE] placeholder-[#457B9D] text-base sm:text-lg lg:text-xl"
+            />
+            <Image
+              src={"/speak.svg"}
+              width={25}
+              height={25}
+              alt="Loader"
+              className="object-contain absolute top-5 right-5"
+            />
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between text-lg sm:text-[20px] items-center">
+            <button
+              className="text-[#5A9AAF] hover:text-gray-600 flex items-center gap-2"
+              onClick={handleSkipClick}
+            >
+              Skip
+              <FaChevronRight />
+            </button>
+            <button
+              className="bg-[#457B9D] hover:bg-[#3A6B7F] text-white w-40 sm:w-48 py-3 rounded-full font-medium transition-colors"
+              onClick={handleNextClick}
+            >
+              {isFinished ? "Create My Story" : "Next"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel - Image */}
+      <div className="w-full lg:w-1/2 relative order-1 lg:order-2 mb-6 sm:mb-0">
+        <Image
+          src={"/assets/clarity-question-image.jpg"}
+          width={2000}
+          height={2000}
+          alt="Clarity Question"
+          className="w-full h-full object-cover rounded-lg lg:rounded-tr-[120px]"
+        />
+      </div>
+
+      {/* Loader */}
+      {isLoading && (
+        <div className="fixed flex flex-col justify-center items-center bg-[#0000007c] h-full w-full top-0 left-0 backdrop-blur-md z-50">
+          <Image
+            src={"/loader.svg"}
+            width={100}
+            height={100}
+            alt="Loader"
+            className="object-contain animate-spin"
+          />
+          <p className="text-[#F1FAEE] text-2xl font-[Cormorant_Garamond]">
+            Crafting something beautiful from what you&apos;ve shared…
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
