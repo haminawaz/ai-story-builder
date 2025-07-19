@@ -5,18 +5,15 @@ const jwtSecret = process.env.JWT_SECRET;
 const frontendBaseUrl = process.env.FRONTEND_BASE_URL;
 const backendBaseUrl = process.env.BACKEND_BASE_URL;
 
-const profilePictureUploadPath = process.env.PROFILE_PICTURE_UPLOAD_PATH;
-const localFileDeleteDir = process.env.LOCAL_FILE_DELETE_DIR;
+const googleClientId = process.env.GOOGLE_CLIENT_ID
 
 const configurations = {
   salt,
   mongoDbUrl,
   jwtSecret,
   frontendBaseUrl,
-  bucketName,
   backendBaseUrl,
-  profilePictureUploadPath,
-  localFileDeleteDir,
+  googleClientId,
 };
 
 module.exports = {

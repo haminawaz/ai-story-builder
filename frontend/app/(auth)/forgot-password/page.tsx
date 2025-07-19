@@ -1,19 +1,56 @@
 "use client";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import InputField from "@/components/ui/InputField";
 import AuthButton from "@/components/ui/AuthButton";
 import Link from "next/link"; // Import Link from next/link
+const serverBaseUrl = process.env.NEXT_PUBLIC_BACKEND_SERVER_URL;
 
 const ForgotPassword = () => {
+  const router = useRouter();
   const [email, setEmail] = useState("");
+  const [disabled, setDisabled] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [errors, setErrors] = useState({
+    email: "",
+  });
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Resetting password for:", email);
+    setErrors({
+      email: "",
+    });
+    setDisabled(true);
+    setAlertMessage("");
+    setSuccess(false);
+    try {
+      const response = await fetch(`${serverBaseUrl}/users/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        sessionStorage.setItem("resetPasswordEmail", email);
+        router.push("/reset-password");
+      } else if (response.status === 403) {
+        const error = typeof data.error;
+        if (error === "object") {
+          setErrors(data.error);
+        }
+      } else {
+        setAlertMessage(data.message || "Failed to send reset code");
+      }
+    } catch {
+      setAlertMessage("Network error. Please try again");
+    } finally {
+      setDisabled(false);
+    }
   };
 
   return (
@@ -22,6 +59,18 @@ const ForgotPassword = () => {
         <h2 className="text-[#1D3557] text-3xl sm:text-4xl font-bold mb-4 font-cormorant-garamond">
           Forgot Password?
         </h2>
+        {alertMessage && (
+          <div
+            className={`mt-4 mb-8 ${
+              success
+                ? "bg-green-100 border-green-400 text-green-700"
+                : "bg-red-100 border-red-400 text-red-700"
+            } border px-4 py-3 rounded relative`}
+            role="alert"
+          >
+            <span className="block sm:inline">{alertMessage}</span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <InputField
@@ -32,8 +81,16 @@ const ForgotPassword = () => {
             placeholder="Enter your email"
             id="email"
           />
+          {errors?.email && (
+            <p className="joi-error-message mb-2">{errors?.email[0]}</p>
+          )}
 
-          <AuthButton text="Send Me Code" type="submit" className="mt-3 w-full" />
+          <AuthButton
+            text="Send Me Code"
+            type="submit"
+            className="mt-3 w-full"
+            isDisabled={disabled}
+          />
         </form>
 
         <div className="flex justify-center text-sm text-[#1D3557] gap-2 mt-3">

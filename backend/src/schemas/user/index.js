@@ -2,53 +2,15 @@ const Joi = require("joi");
 
 module.exports = {
   userRegisterSchema: Joi.object({
-    firstName: Joi.string()
-      .min(1)
-      .max(70)
-      .pattern(/^[^\p{N}]/u)
-      .required()
-      .trim()
-      .messages({
-        "string.base": "First name must be a string",
-        "string.pattern.base":
-          "First name must start with a letter and can include numbers, spaces, but cannot be entirely numbers",
-        "any.required": "First name is required",
-        "string.min": "First name must be at least 1 characters long",
-        "string.max": "First name must not exceed 70 characters",
-        "string.empty": "First name is not allowed to be empty",
-        "string.trim":
-          "First name should not contain any spaces at the beginning or end",
-      }),
-    lastName: Joi.string()
-      .min(1)
-      .max(70)
-      .pattern(/^[^\p{N}]/u)
-      .trim()
-      .required()
-      .messages({
-        "string.base": "Last name must be a string",
-        "string.pattern.base":
-          "Last name must start with a letter and can include numbers, spaces, but cannot be entirely numbers",
-        "any.required": "Last name is required",
-        "string.empty": "Last name is not allowed to be empty",
-        "string.min": "Last name must be at least 1 characters long",
-        "string.max": "Last name must not exceed 70 characters",
-        "string.trim":
-          "Last name should not contain any spaces at the beginning or end",
-      }),
     email: Joi.string()
       .trim()
-      .email({
-        minDomainSegments: 2,
-        tlds: { allow: false },
-      })
+      .lowercase()
+      .email({ minDomainSegments: 2 })
       .required()
       .messages({
-        "string.email": "Enter valid email",
+        "string.email": "Enter a valid email address",
         "any.required": "Email is required",
         "string.empty": "Email is not allowed to be empty",
-        "string.trim":
-          "Email should not contain any spaces at the beginning or end",
       }),
     password: Joi.string()
       .required()
@@ -66,33 +28,85 @@ module.exports = {
         "any.required": "Password is required",
         "string.empty": "Password is not allowed to be empty",
       }),
-    phoneNumber: Joi.string()
-      .pattern(/^[0-9+\-]{10,15}$/)
-      .optional()
-      .allow("", null)
-      .trim()
+    confirmPassword: Joi.string()
+      .valid(Joi.ref("password"))
+      .required()
       .messages({
-        "string.empty": "Phone number is not allowed to be empty",
-        "string.pattern.base": "Phone number should be 10 to 15 digits",
-        "string.trim":
-          "Phone number may not contain any spaces at the beginning or end",
+        "any.only": "Confirm password must match the password",
+        "any.required": "Confirm password is required",
+        "string.empty": "Confirm password is not allowed to be empty",
+      }),
+  }),
+
+  googleLogin: Joi.object({
+    credential: Joi.string().required().messages({
+      "any.required": "Credential is required",
+      "string.empty": "Credential cannot be empty",
+    }),
+  }),
+
+  verifyUserSchema: Joi.object({
+    email: Joi.string()
+      .trim()
+      .lowercase()
+      .email({ minDomainSegments: 2 })
+      .required()
+      .messages({
+        "string.email": "Enter a valid email address",
+        "any.required": "Email is required",
+        "string.empty": "Email is not allowed to be empty",
+      }),
+    code: Joi.string()
+      .pattern(/^\d{5}$/)
+      .required()
+      .messages({
+        "string.pattern.base": "Code must be a 5-digit number",
+        "any.required": "Code is required",
+        "string.empty": "Code cannot be empty",
+      }),
+  }),
+
+  resendSchema: Joi.object({
+    email: Joi.string()
+      .trim()
+      .lowercase()
+      .email({ minDomainSegments: 2 })
+      .required()
+      .messages({
+        "string.email": "Enter a valid email address",
+        "any.required": "Email is required",
+        "string.empty": "Email is not allowed to be empty",
+      }),
+    type: Joi.string().valid("verify", "reset").required().messages({
+      "any.only": "Type must be either 'verify' or 'reset'",
+      "any.required": "Type is required",
+      "string.empty": "Type cannot be empty",
+    }),
+  }),
+
+  emailSchema: Joi.object({
+    email: Joi.string()
+      .trim()
+      .lowercase()
+      .email({ minDomainSegments: 2 })
+      .required()
+      .messages({
+        "string.email": "Enter a valid email address",
+        "any.required": "Email is required",
+        "string.empty": "Email is not allowed to be empty",
       }),
   }),
 
   login: Joi.object({
     email: Joi.string()
       .trim()
-      .email({
-        minDomainSegments: 2,
-        tlds: { allow: false },
-      })
+      .lowercase()
+      .email({ minDomainSegments: 2 })
       .required()
       .messages({
-        "string.email": "Enter valid email",
+        "string.email": "Enter a valid email address",
         "any.required": "Email is required",
         "string.empty": "Email is not allowed to be empty",
-        "string.trim":
-          "Email should not contain any spaces at the beginning or end",
       }),
     password: Joi.string()
       .required()
@@ -112,14 +126,25 @@ module.exports = {
       }),
   }),
 
-  userStatusUpdate: Joi.object({
-    status: Joi.string().valid("blocked", "unblocked").required().messages({
-      "any.only": "Status must be either 'blocked' or 'unblocked'",
-      "any.required": "Status is required",
-    }),
-  }),
-
   resetPassword: Joi.object().keys({
+    email: Joi.string()
+      .trim()
+      .lowercase()
+      .email({ minDomainSegments: 2 })
+      .required()
+      .messages({
+        "string.email": "Enter a valid email address",
+        "any.required": "Email is required",
+        "string.empty": "Email is not allowed to be empty",
+      }),
+    code: Joi.string()
+      .pattern(/^\d{5}$/)
+      .required()
+      .messages({
+        "string.pattern.base": "Code must be a 5-digit number",
+        "any.required": "Code is required",
+        "string.empty": "Code cannot be empty",
+      }),
     password: Joi.string()
       .required()
       .min(6)

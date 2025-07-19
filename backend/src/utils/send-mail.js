@@ -4,7 +4,7 @@ const { mailgunConfig } = require("../configs/email-config.js");
 const { configurations } = require("../configs/config.js");
 
 const backendBaseUrl = configurations.backendBaseUrl;
-const url = backendBaseUrl.includes("localhost")
+const url = backendBaseUrl?.includes("localhost")
   ? "https://api.mailgun.net"
   : "https://api.eu.mailgun.net";
 const mailgun = new Mailgun(formData);

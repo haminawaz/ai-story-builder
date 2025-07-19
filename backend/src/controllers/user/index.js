@@ -1,5 +1,6 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { OAuth2Client } = require("google-auth-library");
 const { configurations } = require("../../configs/config.js");
 const configs = require("../../configs/email-config.js");
 const { sendMail } = require("../../utils/send-mail.js");
@@ -30,9 +31,9 @@ const registerUser = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, salt);
     const verificationCode = Math.floor(
-      100000 + Math.random() * 900000
+      10000 + Math.random() * 90000
     ).toString();
-    const codeExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const codeExpiry = new Date(Date.now() + 5 * 60 * 1000);
 
     if (!existingUser) {
       const newUser = new User({
@@ -54,11 +55,65 @@ const registerUser = async (req, res) => {
       verification_code: verificationCode,
       to_email: email,
     };
-    await sendMail(configs.templates.verifyEmail, dynamicData);
+    // await sendMail(configs.templates.verifyEmail, dynamicData);
 
     return res.status(201).json({
       message: "Signup successfully",
       response: null,
+      error: null,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Internal server error",
+      response: null,
+      error: error.message,
+    });
+  }
+};
+
+const googleLoginUser = async (req, res) => {
+  const { credential } = req.body;
+  const client = new OAuth2Client(configurations.googleClientId);
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: configurations.googleClientId,
+    });
+
+    const payload = ticket.getPayload();
+    const email = payload?.email;
+    const googleId = payload?.sub;
+    const normalizedEmail = email?.toLowerCase();
+
+    let user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      user = new User({
+        email: normalizedEmail,
+        googleId,
+        emailVerified: true,
+      });
+      await user.save();
+    } else {
+      if (!user.googleId) {
+        user.googleId = googleId;
+        user.emailVerified = true;
+        await user.save();
+      }
+    }
+
+    const token = jwt.sign({ user: { email: user.email } }, jwtSecret, {
+      expiresIn: "24h",
+    });
+
+    return res.status(200).json({
+      message: "Google login successful",
+      response: {
+        token,
+        data: {
+          email: user.email,
+        },
+      },
       error: null,
     });
   } catch (error) {
@@ -82,6 +137,23 @@ const loginUser = async (req, res) => {
         error: "User not found",
       });
     }
+    if (!user.emailVerified) {
+      return res.status(400).json({
+        message: "Email not verified",
+        response: null,
+        error: "Email not verified",
+      });
+    }
+
+    if (!user.password) {
+      return res.status(400).json({
+        message:
+          "Password has not been set for this user. Use Google Sign-In to continue",
+        response: null,
+        error:
+          "Password has not been set for this user. Use Google Sign-In to continue",
+      });
+    }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
@@ -89,14 +161,6 @@ const loginUser = async (req, res) => {
         message: "Invalid credentials",
         response: null,
         error: "Invalid credentials",
-      });
-    }
-
-    if (!user.emailVerified) {
-      return res.status(400).json({
-        message: "Email not verified",
-        response: null,
-        error: "Email not verified",
       });
     }
 
@@ -124,9 +188,10 @@ const loginUser = async (req, res) => {
 };
 
 const verifyUser = async (req, res) => {
-  const { code } = req.body;
+  const { code, email } = req.body;
   try {
     const user = await User.findOne({
+      email,
       emailVerificationCode: code,
       emailVerificationCodeExpiry: { $gt: Date.now() },
     }).select("id");
@@ -149,6 +214,67 @@ const verifyUser = async (req, res) => {
       response: null,
       error: null,
     });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Internal server error",
+      response: null,
+      error: error.message,
+    });
+  }
+};
+
+const resendOtp = async (req, res) => {
+  try {
+    const { email, type } = req.body;
+
+    const user = await User.findOne({ email }).select("emailVerified");
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        response: null,
+        error: "User not found",
+      });
+    }
+
+    const verificationCode = Math.floor(
+      10000 + Math.random() * 90000
+    ).toString();
+    const verificationCodeExpiry = new Date(Date.now() + 5 * 60 * 1000);
+
+    if (type === "verify") {
+      await User.findByIdAndUpdate(user.id, {
+        emailVerificationCode: verificationCode,
+        emailVerificationCodeExpiry: verificationCodeExpiry,
+      });
+
+      const dynamicData = {
+        verification_code: verificationCode,
+        to_email: email,
+      };
+      // await sendMail(configs.templates.userForgotPassword, dynamicData);
+
+      return res.status(200).json({
+        message: "Verification code resent to your email successfully",
+        response: null,
+        error: null,
+      });
+    } else {
+      await User.findByIdAndUpdate(user.id, {
+        forgotPasswordCode: verificationCode,
+        forgotPasswordCodeExpiry: verificationCodeExpiry,
+      });
+      const dynamicData = {
+        verification_code: verificationCode,
+        to_email: email,
+      };
+      // await sendMail(configs.templates.userForgotPassword, dynamicData);
+
+      return res.status(200).json({
+        message: "Email has been resent successfully for reset password",
+        response: null,
+        error: null,
+      });
+    }
   } catch (error) {
     return res.status(500).json({
       message: "Internal server error",
@@ -194,9 +320,7 @@ const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
-    const user = await User.findOne({ email }).select(
-      "emailVerified"
-    );
+    const user = await User.findOne({ email }).select("emailVerified");
     if (!user) {
       return res.status(404).json({
         message: "User not found",
@@ -214,9 +338,9 @@ const forgotPassword = async (req, res) => {
     }
 
     const verificationCode = Math.floor(
-      100000 + Math.random() * 900000
+      10000 + Math.random() * 90000
     ).toString();
-    const forgotPasswordCodeExpiry = Date.now() + 24 * 60 * 60 * 1000;
+    const forgotPasswordCodeExpiry = new Date(Date.now() + 5 * 60 * 1000);
     await User.findByIdAndUpdate(user.id, {
       forgotPasswordCode: verificationCode,
       forgotPasswordCodeExpiry,
@@ -226,7 +350,7 @@ const forgotPassword = async (req, res) => {
       verification_code: verificationCode,
       to_email: email,
     };
-    await sendMail(configs.templates.userForgotPassword, dynamicData);
+    // await sendMail(configs.templates.userForgotPassword, dynamicData);
 
     return res.status(200).json({
       message: "Email has been sent successfully for reset password",
@@ -244,10 +368,10 @@ const forgotPassword = async (req, res) => {
 
 const resetPassword = async (req, res) => {
   try {
-    const { code } = req.body;
-    const { password } = req.body;
+    const { code, email, password } = req.body;
 
     const user = await User.findOne({
+      email,
       forgotPasswordCode: code,
       forgotPasswordCodeExpiry: { $gt: Date.now() },
     }).select("email");
@@ -271,10 +395,10 @@ const resetPassword = async (req, res) => {
       url: url,
       to_email: user.email,
     };
-    await sendMail(
-      configs.templates.userResetPasswordConfirmation,
-      dynamicData
-    );
+    // await sendMail(
+    //   configs.templates.userResetPasswordConfirmation,
+    //   dynamicData
+    // );
 
     return res.status(200).json({
       message: "Password reset successfully",
@@ -292,8 +416,10 @@ const resetPassword = async (req, res) => {
 
 module.exports = {
   registerUser,
+  googleLoginUser,
   loginUser,
   verifyUser,
+  resendOtp,
   updatePassword,
   forgotPassword,
   resetPassword,

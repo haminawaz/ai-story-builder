@@ -3,18 +3,21 @@ import React, { useState } from "react";
 import InputField from "@/components/ui/InputField";
 import AuthButton from "@/components/ui/AuthButton";
 import StatusModal from "@/components/ui/StatusModal"; // Importing StatusModal
-import { toast } from "sonner"; // Importing toast from sonner
+// import { toast } from "sonner"; // Importing toast from sonner
 import { useRouter } from "next/navigation";
+const serverBaseUrl = process.env.NEXT_PUBLIC_BACKEND_SERVER_URL;
 
 const ChangePassword = () => {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false); // Modal state
-
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [disabled, setDisabled] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
   const [oldPasswordVisible, setOldPasswordVisible] = useState(false);
   const [newPasswordVisible, setNewPasswordVisible] = useState(false);
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
+  const router = useRouter();
 
   const handleOldPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setOldPassword(e.target.value);
@@ -23,31 +26,49 @@ const ChangePassword = () => {
   const handleNewPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewPassword(e.target.value);
   };
-
-  const handleConfirmPasswordChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setConfirmPassword(e.target.value);
   };
-  const router = useRouter();
-  const handleSubmit = (e: React.FormEvent) => {
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setDisabled(true);
+    setAlertMessage("");
     if (newPassword !== confirmPassword) {
-      toast.error("Passwords do not match!");
+      setAlertMessage("Passwords do not match!");
+      setDisabled(false);
       return;
     } else if (!newPassword || !confirmPassword || !oldPassword) {
-      toast.error("Please enter password!");
+      setAlertMessage("Please enter all password fields!");
+      setDisabled(false);
       return;
     }
-    console.log("Changing password with:", oldPassword, newPassword);
-
-    // Open the modal upon successful password change
-    setIsModalOpen(true);
-    setTimeout(() => {
-      router.push("/profile");
-    }, 1000);
+    try {
+      // Get token from localStorage or cookies as per your auth implementation
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${serverBaseUrl}/users/update-password`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ oldPassword, newPassword, confirmPassword }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setIsModalOpen(true);
+        setTimeout(() => {
+          router.push("/profile");
+        }, 1000);
+      } else {
+        setAlertMessage(data.message || "Failed to change password.");
+      }
+    } catch {
+      setAlertMessage("Network error. Please try again.");
+    } finally {
+      setDisabled(false);
+    }
   };
-
   const handleCloseModal = () => {
     setIsModalOpen(false);
   };
@@ -68,9 +89,8 @@ const ChangePassword = () => {
             placeholder="Enter your old password"
             id="oldPassword"
             showPasswordToggle={true}
-            onTogglePassword={() => setOldPasswordVisible(!oldPasswordVisible)} // Toggle visibility
+            onTogglePassword={() => setOldPasswordVisible(!oldPasswordVisible)}
           />
-
           <InputField
             label="New Password"
             type={newPasswordVisible ? "text" : "password"}
@@ -79,9 +99,8 @@ const ChangePassword = () => {
             placeholder="Enter your new password"
             id="newPassword"
             showPasswordToggle={true}
-            onTogglePassword={() => setNewPasswordVisible(!newPasswordVisible)} // Toggle visibility
+            onTogglePassword={() => setNewPasswordVisible(!newPasswordVisible)}
           />
-
           <InputField
             label="Confirm Password"
             type={confirmPasswordVisible ? "text" : "password"}
@@ -90,12 +109,14 @@ const ChangePassword = () => {
             placeholder="Re-enter your new password"
             id="confirmPassword"
             showPasswordToggle={true}
-            onTogglePassword={() =>
-              setConfirmPasswordVisible(!confirmPasswordVisible)
-            } // Toggle visibility
+            onTogglePassword={() => setConfirmPasswordVisible(!confirmPasswordVisible)}
           />
-
-          <AuthButton text="Submit" type="submit" className="mt-3 w-full" />
+          {alertMessage && (
+            <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+              <span className="block sm:inline">{alertMessage}</span>
+            </div>
+          )}
+          <AuthButton text="Submit" type="submit" className="mt-3 w-full" isDisabled={disabled} />
         </form>
       </div>
 

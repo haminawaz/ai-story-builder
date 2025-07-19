@@ -54,3 +54,17 @@ button {
 .rotate-custom {
   animation: rotateCustom 2s linear infinite;
 }
+
+.joi-error-message {
+  color: red;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.ant-alert-error {
+  color: #ff0000e0 !important;
+}
+
+.ant-alert-success {
+  color: #52c41a !important;
+}

@@ -1,15 +1,25 @@
 "use client";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import InputField from "@/components/ui/InputField";
 import AuthButton from "@/components/ui/AuthButton";
 import Link from "next/link";
+const serverBaseUrl = process.env.NEXT_PUBLIC_BACKEND_SERVER_URL;
 
 const SignUp = () => {
+  const router = useRouter()
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [disabled, setDisabled] = useState(false);
+  const [errors, setErrors] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+  const [alertMessage, setAlertMessage] = useState(false);
 
   // States to handle password visibility
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -27,21 +37,74 @@ const SignUp = () => {
     setConfirmPassword(e.target.value);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
-      alert("Passwords do not match!");
-      return;
-    }
+    setDisabled(true);
+    setErrors({
+      email: "",
+      password: "",
+      confirmPassword: "",
+    });
+
     console.log("Signing up with:", email, password, confirmPassword, rememberMe);
+    const formData = { email, password, confirmPassword };
+    try {
+      const response = await fetch(`${serverBaseUrl}/users/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      const responseData = await response.json();
+      if (response.ok) {
+        sessionStorage.setItem("signupEmail", email);
+        router.push("/verify-otp");
+      } else if (response.status === 403) {
+        const error = typeof responseData.error;
+        if (error === "object") {
+          setErrors(responseData.error);
+        } else {
+          setAlertMessage(responseData.message || "An error occurred");
+          setTimeout(() => setAlertMessage(false), 3000);
+        }
+      } else {
+        setAlertMessage(
+          responseData.message || "Login failed. Please try again"
+        );
+        setTimeout(() => setAlertMessage(false), 3000);
+      }
+    } catch (error) {
+      console.error("Error during login:", error);
+    } finally {
+      setDisabled(false);
+    }
+
   };
 
   return (
     <div className="flex-1 flex justify-center items-center min-h-screen font-inter px-4">
       <div className="bg-white p-6 rounded-lg w-full max-w-[400px] sm:w-[380px]">
+         {/* {alertMessage && (
+          <div
+            className="absolute left-1/2 translate-x-[-50%]"
+            style={{ zIndex: 1050, top: "2%", width: "50%" }}
+          >
+            <Alert
+              closable
+              showIcon
+              message={alertMessage}
+              type="error"
+              onClose={() => setAlertMessage(false)}
+            />
+          </div>
+        )} */}
         <h2 className="text-[#1D3557] text-3xl sm:text-4xl font-bold mb-4 font-cormorant-garamond">
           Create Account!
         </h2>
+        {alertMessage && (
+          <div className={`mt-4 mb-8 bg-red-100 border-red-400 text-red-700 border px-4 py-3 rounded relative`} role="alert">
+            <span className="block sm:inline">{alertMessage}</span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <InputField
@@ -52,6 +115,9 @@ const SignUp = () => {
             placeholder="Enter your email"
             id="email"
           />
+          {errors?.email && (
+            <p className="joi-error-message mb-4">{errors?.email[0]}</p>
+          )}
 
           <InputField
             label="Password"
@@ -63,6 +129,9 @@ const SignUp = () => {
             showPasswordToggle={true}
             onTogglePassword={() => setPasswordVisible(!passwordVisible)} // Toggle password visibility
           />
+          {errors?.password && (
+            <p className="joi-error-message mb-4">{errors?.password[0]}</p>
+          )}
 
           <InputField
             label="Confirm Password"
@@ -74,6 +143,9 @@ const SignUp = () => {
             showPasswordToggle={true}
             onTogglePassword={() => setConfirmPasswordVisible(!confirmPasswordVisible)} // Toggle password visibility
           />
+          {errors?.confirmPassword && (
+            <p className="joi-error-message mb-2">{errors?.confirmPassword[0]}</p>
+          )}
 
           <div className="flex items-center mb-2">
             <input
@@ -93,7 +165,7 @@ const SignUp = () => {
             </div>
           </div>
 
-          <AuthButton text="Sign Up" type="submit" className="mt-3 w-full" />
+          <AuthButton text="Sign Up" type="submit" className="mt-3 w-full" isDisabled={disabled}/>
         </form>
 
         <div className="flex items-center justify-center my-3">

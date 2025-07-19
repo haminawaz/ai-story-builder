@@ -1,17 +1,21 @@
 "use client";
 import React, { useState } from "react";
-import Image from "next/image";
 import InputField from "@/components/ui/InputField";
 import AuthButton from "@/components/ui/AuthButton";
 import Link from "next/link"; // Import Link from next/link
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import GoogleLoginButton from "@/components/GoogleLoginButton";
+const serverBaseUrl = process.env.NEXT_PUBLIC_BACKEND_SERVER_URL;
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [passwordVisible, setPasswordVisible] = useState(false); // Added state for password visibility
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [disabled, setDisabled] = useState(false);
+  const [errors, setErrors] = useState({ email: "", password: "" });
+  const [alertMessage, setAlertMessage] = useState("");
+  const router = useRouter();
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
@@ -21,33 +25,42 @@ const Login = () => {
     setPassword(e.target.value);
   };
 
-  const router = useRouter();
-const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault(); // Prevent form submission at the top
-
-  if (!email.trim()) {
-    toast.error("Please enter your email");
-    return;
-  }
-
-  if (!password.trim()) {
-    toast.error("Please enter your password");
-    return;
-  }
-
-  // Optional: You can add regex validation for email format here
-  // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  // if (!emailRegex.test(email)) {
-  //   toast.error("Please enter a valid email address");
-  //   return;
-  // }
-
-  // Success: proceed with login
-  console.log("Logging in with:", email, password, rememberMe);
-  toast.success("Login successful!");
-  router.push("/profile");
-};
-
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDisabled(true);
+    setErrors({ email: "", password: "" });
+    setAlertMessage("");
+    const formData = { email, password };
+    try {
+      const response = await fetch(`${serverBaseUrl}/users/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      const responseData = await response.json();
+      if (response.ok) {
+        const { token, data } = responseData.response;
+        router.push("/landing-page");
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify({ email: data.email }));
+      } else if (response.status === 403) {
+        const error = typeof responseData.error;
+        if (error === "object") {
+          setErrors(responseData.error);
+        }
+      } else {
+        setAlertMessage(
+          responseData.message || "Login failed. Please try again"
+        );
+        setTimeout(() => setAlertMessage(""), 3000);
+      }
+    } catch {
+      setAlertMessage("Network error. Please try again.");
+      setTimeout(() => setAlertMessage(""), 3000);
+    } finally {
+      setDisabled(false);
+    }
+  };
 
   return (
     <div className="flex justify-center items-center min-h-screen font-inter px-4 sm:px-6 lg:px-8">
@@ -55,6 +68,11 @@ const handleSubmit = (e: React.FormEvent) => {
         <h2 className="text-[#1D3557] text-3xl sm:text-4xl font-bold mb-4 font-cormorant-garamond">
           Welcome!
         </h2>
+        {alertMessage && (
+          <div className={`mt-4 mb-8 bg-red-100 border-red-400 text-red-700 border px-4 py-3 rounded relative`} role="alert">
+            <span className="block sm:inline">{alertMessage}</span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <InputField
@@ -65,6 +83,9 @@ const handleSubmit = (e: React.FormEvent) => {
             placeholder="Enter your email"
             id="email"
           />
+          {errors?.email && (
+            <p className="joi-error-message mb-4">{errors?.email[0]}</p>
+          )}
 
           <InputField
             label="Password"
@@ -76,8 +97,11 @@ const handleSubmit = (e: React.FormEvent) => {
             showPasswordToggle={true}
             onTogglePassword={() => setPasswordVisible(!passwordVisible)} // Toggle password visibility
           />
+          {errors?.password && (
+            <p className="joi-error-message mb-4">{errors?.password[0]}</p>
+          )}
 
-          <div className="flex items-center mb-2">
+          <div className="flex items-center my-2">
             <input
               type="checkbox"
               id="rememberMe"
@@ -101,7 +125,7 @@ const handleSubmit = (e: React.FormEvent) => {
             </div>
           </div>
 
-          <AuthButton text="Log in" type="submit" className="mt-3 w-full" />
+          <AuthButton text="Log in" type="submit" className="mt-3 w-full" isDisabled={disabled} />
         </form>
 
         <div className="flex items-center justify-center my-3">
@@ -109,7 +133,9 @@ const handleSubmit = (e: React.FormEvent) => {
           <span className="mx-4 text-[#1D3557] text-sm font-bold">Or</span>
           <div className="h-[1px] w-full bg-[#A8DADC]"></div>
         </div>
+        <GoogleLoginButton />
 
+{/* 
         <button className="w-full text-sm font-semibold cursor-pointer h-[47px] border-2 border-[#1D3557] text-[#1D3557] rounded-md flex justify-center items-center space-x-2">
           <Image
             src={"/google.svg"}
@@ -119,7 +145,7 @@ const handleSubmit = (e: React.FormEvent) => {
             className="object-cover"
           />
           <span>Continue with Google</span>
-        </button>
+        </button> */}
 
         <div className="flex justify-center text-sm text-[#1D3557] gap-2 mt-3">
           <span className="">New Here?</span>
