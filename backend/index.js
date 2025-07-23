@@ -11,8 +11,13 @@ const version = process.env.API_VERSION;
 
 app.use(
   cors({
+    origin: [
+      "http://localhost:3000",
+      "https://your-frontend.vercel.app",
+    ],
     credentials: true,
-    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 app.use(bodyParser.urlencoded({ extended: true }));
