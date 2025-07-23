@@ -2,13 +2,17 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
 const { configurations } = require("../../configs/config.js");
-const configs = require("../../configs/email-config.js");
 const { sendMail } = require("../../utils/send-mail.js");
 const User = require("../../models/users/model.js");
+const {
+  signupEmail,
+  resendOtpEmail,
+  forgotPasswordEmail,
+  passwordResetConfirmationEmail,
+} = require("../../data/emails.js");
 
 const salt = configurations.salt;
 const jwtSecret = configurations.jwtSecret;
-const frontendBaseUrl = configurations.frontendBaseUrl;
 
 const registerUser = async (req, res) => {
   try {
@@ -52,10 +56,11 @@ const registerUser = async (req, res) => {
     }
 
     const dynamicData = {
-      verification_code: verificationCode,
+      subject: "Verify Your Email",
       to_email: email,
     };
-    // await sendMail(configs.templates.verifyEmail, dynamicData);
+    const emailTemplate = await signupEmail(verificationCode);
+    await sendMail(emailTemplate, dynamicData);
 
     return res.status(201).json({
       message: "Signup successfully",
@@ -248,10 +253,11 @@ const resendOtp = async (req, res) => {
       });
 
       const dynamicData = {
-        verification_code: verificationCode,
+        subject: "Resent Verification Code",
         to_email: email,
       };
-      // await sendMail(configs.templates.userForgotPassword, dynamicData);
+      const emailTemplate = await resendOtpEmail(verificationCode, type);
+      await sendMail(emailTemplate, dynamicData);
 
       return res.status(200).json({
         message: "Verification code resent to your email successfully",
@@ -263,11 +269,13 @@ const resendOtp = async (req, res) => {
         forgotPasswordCode: verificationCode,
         forgotPasswordCodeExpiry: verificationCodeExpiry,
       });
+
       const dynamicData = {
-        verification_code: verificationCode,
+        subject: "Resent Verification Code",
         to_email: email,
       };
-      // await sendMail(configs.templates.userForgotPassword, dynamicData);
+      const emailTemplate = await resendOtpEmail(verificationCode, type);
+      await sendMail(emailTemplate, dynamicData);
 
       return res.status(200).json({
         message: "Email has been resent successfully for reset password",
@@ -347,10 +355,11 @@ const forgotPassword = async (req, res) => {
     });
 
     const dynamicData = {
-      verification_code: verificationCode,
+      subject: "Reset Password Code",
       to_email: email,
     };
-    // await sendMail(configs.templates.userForgotPassword, dynamicData);
+    const emailTemplate = await forgotPasswordEmail(verificationCode);
+    await sendMail(emailTemplate, dynamicData);
 
     return res.status(200).json({
       message: "Email has been sent successfully for reset password",
@@ -390,15 +399,12 @@ const resetPassword = async (req, res) => {
       forgotPasswordCodeExpiry: null,
     });
 
-    const url = `${frontendBaseUrl}/login`;
     const dynamicData = {
-      url: url,
-      to_email: user.email,
+      subject: "Reset Password Confirmation",
+      to_email: email,
     };
-    // await sendMail(
-    //   configs.templates.userResetPasswordConfirmation,
-    //   dynamicData
-    // );
+    const emailTemplate = await passwordResetConfirmationEmail();
+    await sendMail(emailTemplate, dynamicData);
 
     return res.status(200).json({
       message: "Password reset successfully",

@@ -1,28 +1,35 @@
 "use client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FaChevronRight } from "react-icons/fa";
 import { toast } from "sonner"; // Add this if you're using react-toastify
-
-const questions = [
-  "What did you feel in that moment?",
-  "What were the key thoughts running through your mind?",
-  "How did the situation change your perspective?",
-  "Who were you with during this experience?",
-  "Where did this event take place?",
-  "What were your first actions after it happened?",
-  "How would you describe your emotions on that day?",
-  "What impact did this event have on your life?",
-  "What would you tell your past self about this moment?",
-  "Looking back, what would you do differently?",
-];
+const serverBaseUrl = process.env.NEXT_PUBLIC_BACKEND_SERVER_URL;
 
 export default function ClarityQuestions() {
+  const [storyId, setStoryId] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<string[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<string[]>(new Array(questions.length).fill(""));
+  const [answers, setAnswers] = useState<string[]>(
+    new Array(questions.length).fill("")
+  );
   const [isFinished, setIsFinished] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // Loading state
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const storedStoryId = sessionStorage.getItem("storyId");
+    setStoryId(storedStoryId);
+
+    const stored = sessionStorage.getItem("questions");
+    const questionArray = stored
+      ? stored
+          .split("?,")
+          .map((q) => q.trim())
+          .filter((q) => q.length > 0)
+      : [];
+    setQuestions(questionArray);
+    setAnswers(new Array(questionArray.length).fill(""));
+  }, []);
 
   const handleAnswerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const updatedAnswers = [...answers];
@@ -30,14 +37,13 @@ export default function ClarityQuestions() {
     setAnswers(updatedAnswers);
   };
 
-  const router = useRouter(); 
+  const router = useRouter();
 
   const handleNextClick = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
-      router.push('/confirmation-page')
-      setIsFinished(true); // All questions answered
+      setIsFinished(true);
       handleCreateStory();
     }
   };
@@ -51,12 +57,41 @@ export default function ClarityQuestions() {
     }
   };
 
-  const handleCreateStory = () => {
-    setIsLoading(true); // Start loading
-    setTimeout(() => {
-      setIsLoading(false); // Stop loading after 2 seconds
-      toast.success("Story created successfully!"); // Display success toast
-    }, 2000);
+  const handleCreateStory = async () => {
+    setIsLoading(true);
+    const qa = questions.map((question, index) => ({
+      question,
+      answer: answers[index],
+    }));
+
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch(
+        `${serverBaseUrl}/story/generate?story_id=${storyId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            qa,
+          }),
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to submit");
+
+      sessionStorage.removeItem("questions");
+      sessionStorage.removeItem("storyId");
+      router.push("/confirmation-page");
+      toast.success("Story created successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to create story");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

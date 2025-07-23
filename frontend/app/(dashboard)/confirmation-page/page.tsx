@@ -17,7 +17,7 @@ export default function ConfirmationPage() {
     setTimeout(() => {
       setIsLoading(false);
       toast.success("Redirecting to Home…");
-      router.push("/clarity-questions");
+      router.push("/landing-page");
     }, 2000);
   };
 

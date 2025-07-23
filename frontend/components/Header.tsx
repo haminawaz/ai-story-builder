@@ -9,13 +9,19 @@ const Header = () => {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const [token, setToken] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    setToken(storedToken);
+  }, []);
 
   const navItems = [
     { label: "Home", path: "/landing-page" },
     { label: "How this works?", path: "/how-it-works" },
     { label: "FAQ's", path: "/faqs" },
     { label: "Story", path: "/story" },
-    { label: "Profile", path: "/profile" }, // ✅ Added profile route
+    ...(token ? [{ label: "Profile", path: "/profile" }] : []),
   ];
 
   return (
@@ -44,12 +50,14 @@ const Header = () => {
               </span>
             ))}
 
-            <button
-              onClick={() => router.push("/login")}
-              className="bg-[#1D3557] text-white px-6 py-2 rounded-full text-base font-semibold hover:bg-[#163054] transition-all duration-300 shadow-md"
-            >
-              Login here!
-            </button>
+            {!token && (
+              <button
+                onClick={() => router.push("/login")}
+                className="bg-[#1D3557] text-white px-6 py-2 rounded-full text-base font-semibold hover:bg-[#163054] transition-all duration-300 shadow-md"
+              >
+                Login here!
+              </button>
+            )}
           </div>
 
           {/* Mobile Menu Icon */}

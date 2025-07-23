@@ -83,20 +83,6 @@ const SignUp = () => {
   return (
     <div className="flex-1 flex justify-center items-center min-h-screen font-inter px-4">
       <div className="bg-white p-6 rounded-lg w-full max-w-[400px] sm:w-[380px]">
-         {/* {alertMessage && (
-          <div
-            className="absolute left-1/2 translate-x-[-50%]"
-            style={{ zIndex: 1050, top: "2%", width: "50%" }}
-          >
-            <Alert
-              closable
-              showIcon
-              message={alertMessage}
-              type="error"
-              onClose={() => setAlertMessage(false)}
-            />
-          </div>
-        )} */}
         <h2 className="text-[#1D3557] text-3xl sm:text-4xl font-bold mb-4 font-cormorant-garamond">
           Create Account!
         </h2>

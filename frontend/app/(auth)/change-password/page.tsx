@@ -1,10 +1,9 @@
 "use client";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import InputField from "@/components/ui/InputField";
 import AuthButton from "@/components/ui/AuthButton";
 import StatusModal from "@/components/ui/StatusModal"; // Importing StatusModal
-// import { toast } from "sonner"; // Importing toast from sonner
-import { useRouter } from "next/navigation";
 const serverBaseUrl = process.env.NEXT_PUBLIC_BACKEND_SERVER_URL;
 
 const ChangePassword = () => {

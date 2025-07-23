@@ -9,7 +9,7 @@ const {
   updatePassword,
   forgotPassword,
   resetPassword,
-} = require("../../controllers/user/index.js");
+} = require("../../controllers/users/index.js");
 const joiValidator = require("../../middlewares/joi.js");
 const { verifyUserToken } = require("../../middlewares/authMiddleware.js");
 

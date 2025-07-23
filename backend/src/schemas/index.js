@@ -7,7 +7,7 @@ const {
   emailSchema,
   resetPassword,
   passwordUpdate,
-} = require("./user/index");
+} = require("./users/index");
 
 module.exports = {
   userRegisterSchema,

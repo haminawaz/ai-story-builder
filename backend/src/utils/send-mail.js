@@ -1,33 +1,31 @@
-const formData = require("form-data");
-const Mailgun = require("mailgun.js");
-const { mailgunConfig } = require("../configs/email-config.js");
-const { configurations } = require("../configs/config.js");
+const nodemailer = require("nodemailer");
+const { configurations } = require("../configs/config");
 
-const backendBaseUrl = configurations.backendBaseUrl;
-const url = backendBaseUrl?.includes("localhost")
-  ? "https://api.mailgun.net"
-  : "https://api.eu.mailgun.net";
-const mailgun = new Mailgun(formData);
-const mg = mailgun.client({ username: "api", key: mailgunConfig.apiKey, url });
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: configurations?.gmailUser,
+    pass: configurations?.gmailPassword,
+  },
+});
 
 const sendMail = async (template, dynamicData) => {
   try {
-    const data = {
-      from: template.from,
-      to: [dynamicData.to_email],
-      template: template.name,
-      "h:X-Mailgun-Variables": JSON.stringify(dynamicData),
+    const mailOptions = {
+      from: configurations?.gmailUser,
+      to: dynamicData.to_email,
+      subject: dynamicData.subject,
+      html: template,
     };
-    const mailgunResults = await mg.messages.create(
-      `${mailgunConfig.domain}`,
-      data
-    );
-    console.log("mailgunResults", mailgunResults);
+
+    const emailResult = await transporter.sendMail(mailOptions);
+    console.log("Email sent:", emailResult?.response);
   } catch (error) {
-    console.error("error", error);
+    console.error("Error sending email:", error);
     throw error;
   }
 };
+
 
 module.exports = {
   sendMail,

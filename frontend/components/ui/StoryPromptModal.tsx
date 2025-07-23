@@ -5,6 +5,7 @@ import { Mic, X, PenTool } from "lucide-react";
 import { Sparkles } from "lucide-react";
 import { Button } from "./Button";
 import { useRouter } from "next/navigation";
+const serverBaseUrl = process.env.NEXT_PUBLIC_BACKEND_SERVER_URL;
 
 interface StoryPromptModalProps {
   isOpen: boolean;
@@ -18,12 +19,42 @@ export default function StoryPromptModal({
   const router = useRouter();
   const [story, setStory] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [disabled, setDisabled] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
+  const handleContinue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDisabled(true);
+    setAlertMessage(null);
 
-  const handleContinue = () => {
-    router.push("/clarity-questions");
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${serverBaseUrl}/story/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ story }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        const storyId = data.response.storyId;
+        const questions = data.response.questions;
+
+        sessionStorage.setItem("storyId", storyId);
+        sessionStorage.setItem("questions", questions);
+        router.push("/clarity-questions");
+      } else {
+        setAlertMessage(data.message || "Failed to create story");
+      }
+    } catch {
+      setAlertMessage("Network error. Please try again");
+    } finally {
+      setDisabled(false);
+    }
   };
 
   return (
@@ -52,6 +83,14 @@ export default function StoryPromptModal({
               Every great story begins with a single moment. What’s yours?
             </p>
           </div>
+          {alertMessage && (
+            <div
+              className="mt-4 mb-8 bg-red-100 border-red-400 text-red-700 border px-4 py-3 rounded relative"
+              role="alert"
+            >
+              <span className="block sm:inline">{alertMessage}</span>
+            </div>
+          )}
 
           {/* Textarea */}
           <div className="relative mb-6">
@@ -98,7 +137,7 @@ export default function StoryPromptModal({
           <div className="flex flex-col sm:flex-row gap-3 mt-5">
             <Button
               onClick={handleContinue}
-              disabled={story.trim().length === 0}
+              disabled={story.trim().length === 0 || disabled}
               className="flex-1 py-3 text-sm font-semibold bg-[#457B9D] text-white hover:bg-[#1D3557] disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 shadow-md"
             >
               Continue Journey
