@@ -24,7 +24,7 @@ const planRoutes = require("./src/routes/plans/index.js");
 const storyRoutes = require("./src/routes/story/index.js");
 
 app.use(`/api/${version}/ping`, (req, res) => {
-  return res.send("Welcome to Starter code!");
+  return res.send("Welcome to Ai Story Builder Backend!");
 });
 
 // User Routes

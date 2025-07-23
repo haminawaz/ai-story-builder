@@ -28,6 +28,6 @@ const runSeeder = async () => {
   }
 };
 
-// runSeeder();
+runSeeder();
 
 module.exports = mongoose;
