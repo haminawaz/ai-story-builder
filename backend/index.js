@@ -8,14 +8,11 @@ const app = express();
 const port = process.env.PORT || 3001;
 const appName = process.env.APP_NAME;
 const version = process.env.API_VERSION;
-const frontendBaseUrl = process.env.FRONTEND_BASE_URL;
 
 app.use(
   cors({
-    origin: [frontendBaseUrl],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    origin: "*",
   })
 );
 app.use(bodyParser.urlencoded({ extended: true }));
