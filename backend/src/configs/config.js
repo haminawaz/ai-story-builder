@@ -8,6 +8,8 @@ const openAiKey = process.env.OPENAI_API_KEY;
 const gmailUser = process.env.GMAIL_USER;
 const gmailPassword = process.env.GMAIL_PASSWORD;
 
+const frontendBaseUrl = process.env.FRONTEND_BASE_URL;
+
 const configurations = {
   salt,
   mongoDbUrl,
@@ -16,6 +18,7 @@ const configurations = {
   openAiKey,
   gmailUser,
   gmailPassword,
+  frontendBaseUrl,
 };
 
 module.exports = {
