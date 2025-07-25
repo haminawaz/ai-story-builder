@@ -12,7 +12,7 @@ const version = process.env.API_VERSION;
 app.use(
   cors({
     credentials: true,
-    origin: "*",
+    origin: "https://ai-story-builder-frontend.vercel.app",
   })
 );
 app.use(bodyParser.urlencoded({ extended: true }));
