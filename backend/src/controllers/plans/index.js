@@ -1,8 +1,13 @@
-const { configurations } = require("../../configs/config");
+const Stripe = require("stripe");
 const Plan = require("../../models/plans/model");
 const Payment = require("../../models/payment/model");
 const Subscription = require("../../models/subscription/model");
 const User = require("../../models/users/model");
+const { configurations } = require("../../configs/config");
+const { sendMail } = require("../../utils/send-mail");
+const { checkoutSuccessEmail } = require("../../data/emails");
+
+const stripe = Stripe(configurations.stripeSecretKey);
 
 const getAllPlans = async (req, res) => {
   try {
@@ -63,9 +68,9 @@ const createCheckout = async (req, res) => {
 
   let expiryDate = new Date(startDate);
   if (billingCycle === 'monthly') {
-    expiryDate.setDate(expiryDate.getDate() + 30);
+    expiryDate?.setDate(expiryDate.getDate() + 30);
   } else if (billingCycle === 'yearly') {
-    expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+    expiryDate?.setFullYear(expiryDate.getFullYear() + 1);
   }
 
   const lineItems = [
@@ -73,7 +78,7 @@ const createCheckout = async (req, res) => {
       price_data: {
         currency: "usd",
         product_data: {
-          name: "User",
+          name: plan.name + " - " + plan.type,
         },
         unit_amount: Math.round(amount * 100),
       },
@@ -87,7 +92,7 @@ const createCheckout = async (req, res) => {
     customer_email: email,
     metadata: {
       userId: userId,
-      planId: plan._id,
+      planId: plan._id.toString(),
       startDate: startDate.toISOString(),
       expiryDate: expiryDate.toISOString(),
     },
@@ -119,10 +124,8 @@ const checkoutComplete = async (req, res) => {
       const transactionId = body.data.object.id;
       const dateCreated = new Date(body.data.object.created * 1000);
 
-      const existingTransaction = await paymentQueries.getUserPayment(
-        transactionId
-      );
-      if (existingTransaction.length > 0) {
+      const existingTransaction = await Payment.findOne({ transactionId });
+      if (existingTransaction) {
         return res.status(409).json({
           message: "Transaction already processed",
           data: null,
@@ -170,10 +173,15 @@ const checkoutComplete = async (req, res) => {
       const user = await User.findById(userId);
       const email = user.email;
 
+      const plan = await Plan.findById(planId);
+      const planName = plan.name + " - " + plan.type;
+
       const dynamicData = {
+        subject: "Plan activated successfully",
         to_email: email,
       };
-      await sendMail(configs.templates.paymentConfirm, dynamicData);
+      const emailTemplate = await checkoutSuccessEmail(planName, startDate, expiryDate);
+      await sendMail(emailTemplate, dynamicData);
 
       return res.status(201).json({
         message: "User subscription has been added",
@@ -182,6 +190,7 @@ const checkoutComplete = async (req, res) => {
       });
     }
   } catch (error) {
+    console.log("error", error)
     return res.status(500).json({
       message: error.message,
       data: null,
@@ -192,4 +201,6 @@ const checkoutComplete = async (req, res) => {
 
 module.exports = {
   getAllPlans,
+  createCheckout,
+  checkoutComplete,
 };

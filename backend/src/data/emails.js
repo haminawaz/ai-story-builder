@@ -322,10 +322,94 @@ const generateStoryEmail = async (storyContent) => {
   `;
 };
 
+const checkoutSuccessEmail = async (planName, startDate, expiryDate) => {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+      <title>Checkout Successful</title>
+      <style>
+        body {
+          font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          background-color: #f4f4f7;
+          margin: 0;
+          padding: 0;
+        }
+        .container {
+          max-width: 600px;
+          margin: 40px auto;
+          background-color: #ffffff;
+          border-radius: 10px;
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+          overflow: hidden;
+        }
+        .header {
+          background-color: #10b981;
+          color: white;
+          padding: 24px;
+          text-align: center;
+        }
+        .content {
+          padding: 32px;
+          color: #333333;
+        }
+        .highlight {
+          background-color: #ecfdf5;
+          padding: 12px 16px;
+          border-radius: 8px;
+          margin: 16px 0;
+          color: #065f46;
+          font-weight: bold;
+          text-align: center;
+        }
+        .footer {
+          padding: 24px;
+          text-align: center;
+          font-size: 14px;
+          color: #888;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Checkout Successful!</h1>
+        </div>
+        <div class="content">
+          <p>Hi there,</p>
+          <p>Thank you for your purchase! Your plan has been activated successfully.</p>
+          <div class="highlight">
+            Plan: ${planName}<br />
+            Start Date: ${new Date(startDate).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric"
+            })}<br />
+            Expiry Date: ${new Date(expiryDate).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric"
+            })}
+          </div>
+          <p>We’re excited to have you on board. If you have any questions, feel free to reach out to our support team.</p>
+          <p style="margin-top: 32px;">— The Team</p>
+        </div>
+        <div class="footer">
+          © All rights reserved.
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
 module.exports = {
   signupEmail,
   resendOtpEmail,
   forgotPasswordEmail,
   passwordResetConfirmationEmail,
   generateStoryEmail,
+  checkoutSuccessEmail,
 };

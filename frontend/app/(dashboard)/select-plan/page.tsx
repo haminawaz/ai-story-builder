@@ -40,14 +40,6 @@ const PricingSection = () => {
   return (
     <div className="min-h-screen relative overflow-hidden">
       <div className="p-10 relative z-10 bg-[url('/assets/letter-image.png')]">
-        {alertMessage && (
-          <div
-            className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
-            role="alert"
-          >
-            <span className="block sm:inline">{alertMessage}</span>
-          </div>
-        )}
         <div className="relative flex bg-[#F1FAEE] rounded-2xl pb-15 flex-col items-center justify-center min-h-screen">
           <div className="bg-[url('/assets/letter-image.png')] rounded-t-2xl w-full h-[250px] bg-cover bg-center flex justify-center items-center">
             <div className="text-center text-white px-4 py-12">
@@ -60,10 +52,21 @@ const PricingSection = () => {
             </div>
           </div>
 
-          {/* Pricing Cards Flexbox */}
+          {alertMessage && (
+            <div
+              className="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+              role="alert"
+            >
+              <span className="block sm:inline">{alertMessage}</span>
+            </div>
+          )}
           <div className="flex flex-wrap justify-center gap-15 lg:10 xl:gap-5 w-full mt-12 max-w-full px-6 md:px-0">
             {plans.map((plan, idx) => (
-              <PricingCard key={idx} plan={plan} />
+              <PricingCard
+                key={idx}
+                plan={plan}
+                setAlertMessage={setAlertMessage}
+              />
             ))}
           </div>
         </div>

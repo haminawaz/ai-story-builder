@@ -1,8 +1,12 @@
 import React from "react";
+import { loadStripe } from "@stripe/stripe-js";
 import { Check, Star, Zap, Crown } from "lucide-react";
+import { handleSessionExpiry } from "@/utils/handleSessionExpiry";
+const serverBaseUrl = process.env.NEXT_PUBLIC_BACKEND_SERVER_URL;
+const stripePublicKey = process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY;
 
 interface PricingPlan {
-  id: string;
+  _id: string;
   name: string;
   type: string;
   price: number;
@@ -15,9 +19,53 @@ interface PricingPlan {
 
 interface PricingCardProps {
   plan: PricingPlan;
+  setAlertMessage: (message: string) => void;
 }
 
-const PricingCard = ({ plan }: PricingCardProps) => {
+const PricingCard = ({ plan, setAlertMessage }: PricingCardProps) => {
+  const handleCheckout = async (planId: string) => {
+    if (!stripePublicKey) {
+      setAlertMessage("Stripe public key is missing");
+      return;
+    }
+    const stripe = await loadStripe(stripePublicKey);
+    if (!stripe) {
+      setAlertMessage("Stripe failed to initialize");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    const body = { planId };
+    try {
+      const response = await fetch(
+        `${serverBaseUrl}/plans/create-checkout-session`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(body),
+        }
+      );
+      const responseData = await response.json();
+      if (!response.ok) {
+        if (handleSessionExpiry(responseData.message, setAlertMessage)) return;
+        const msg = responseData.message || "Failed to fetch plans";
+        setAlertMessage(msg);
+      } else {
+        const session = responseData?.data;
+        await stripe.redirectToCheckout({
+          sessionId: session.id,
+        });
+      }
+    } catch (error) {
+      const err = error as Error;
+      setAlertMessage(err.message || "An error occurred");
+      setTimeout(() => setAlertMessage(""), 3000);
+    }
+  };
+
   const getCardIcon = () => {
     switch (plan.type) {
       case "DIY":
@@ -167,6 +215,10 @@ const PricingCard = ({ plan }: PricingCardProps) => {
                 ? "bg-white text-[#457B9D] hover:bg-[#E8F1F2] hover:text-[#1D3557] shadow-white/20 z-20"
                 : `${getGradient()} text-white hover:shadow-2xl z-20`
             }`}
+            onClick={() => {
+              console.log("plan:", plan);
+              handleCheckout(plan._id);
+            }}
           >
             <span className="flex items-center justify-center gap-2">
               Choose {plan.name}
