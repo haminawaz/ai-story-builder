@@ -9,12 +9,24 @@ const port = process.env.PORT || 3001;
 const appName = process.env.APP_NAME;
 const version = process.env.API_VERSION;
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://ai-story-builder-frontend.vercel.app"
+];
+
 app.use(
   cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
-    origin: "*",
   })
 );
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(express.json());
